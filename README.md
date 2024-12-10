@@ -2,6 +2,8 @@
 
 Personal finance management application built with Next.js, Firebase, and Mantine UI.
 
+[Live Demo (Deployed on Vercel)](https://cprg306-project-ebon.vercel.app/)
+
 ## Features
 
 - Expense and income tracking
