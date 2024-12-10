@@ -1,4 +1,6 @@
-import {forwardRef, useEffect, useState} from 'react';
+'use client';
+
+import {forwardRef, useCallback, useEffect, useState} from 'react';
 import {
     ActionIcon,
     Alert,
@@ -110,7 +112,7 @@ export default function CategoryManager() {
         return () => clearTimeout(debounceTimer);
     }, [iconSearchTerm]);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         try {
             const data = await services.categories.getCategoriesByType(selectedType);
             setCategories(data);
@@ -119,30 +121,27 @@ export default function CategoryManager() {
                 setError(error.message);
             }
         }
-    };
+    }, [selectedType]);
 
     useEffect(() => {
         const init = async () => {
             try {
-                await services.categories.initializeDefaultCategories();
-                await loadCategories();
+                if (initializing) {
+                    await services.categories.initializeDefaultCategories();
+                    await loadCategories();
+                    setInitializing(false);
+                } else if (selectedType) {
+                    await loadCategories();
+                }
             } catch (error) {
                 if (error instanceof AppError) {
                     setError(error.message);
                 }
-            } finally {
-                setInitializing(false);
             }
         };
 
         init();
-    }, []);
-
-    useEffect(() => {
-        if (!initializing) {
-            loadCategories();
-        }
-    }, [selectedType, initializing]);
+    }, [initializing, selectedType, loadCategories]);
 
     const handleCreateCategory = async () => {
         try {

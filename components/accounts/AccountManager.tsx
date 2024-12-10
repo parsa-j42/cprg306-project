@@ -1,4 +1,6 @@
-import {useEffect, useState} from 'react';
+'use client';
+
+import {useCallback, useEffect, useState} from 'react';
 import {ActionIcon, Alert, Button, ColorInput, Group, Modal, Paper, Stack, Text, TextInput} from '@mantine/core';
 import {IconAlertCircle, IconCheck, IconEdit, IconPlus, IconTrash, IconX} from '@tabler/icons-react';
 import {services} from '@/lib/services';
@@ -19,7 +21,7 @@ export default function AccountManager() {
         color: '#1c7ed6'
     });
 
-    const loadAccounts = async () => {
+    const loadAccounts = useCallback(async () => {
         try {
             if (!user) return;
             const data = await services.accounts.getAccountsByUser(user.uid);
@@ -36,11 +38,12 @@ export default function AccountManager() {
                 });
             }
         }
-    };
+    }, [user]);
+
 
     useEffect(() => {
         loadAccounts();
-    }, [user]);
+    }, [user, loadAccounts]);
 
     const handleCreateAccount = async () => {
         try {

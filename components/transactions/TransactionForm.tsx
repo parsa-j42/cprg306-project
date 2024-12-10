@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
     Alert,
     Button,
@@ -71,42 +71,41 @@ export default function TransactionForm({
         </Group>
     );
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                if (!user) return;
+    const loadData = useCallback(async () => {
+        try {
+            if (!user) return;
 
-                const [accountsData, categoriesData] = await Promise.all([
-                    services.accounts.getAccountsByUser(user.uid),
-                    services.categories.getCategoriesByType(type === 'POSITIVE' ? 'INCOME' : 'EXPENSE')
-                ]);
+            const [accountsData, categoriesData] = await Promise.all([
+                services.accounts.getAccountsByUser(user.uid),
+                services.categories.getCategoriesByType(type === 'POSITIVE' ? 'INCOME' : 'EXPENSE')
+            ]);
 
-                setAccounts(accountsData);
-                setCategories(categoriesData);
+            setAccounts(accountsData);
+            setCategories(categoriesData);
 
-                // Set first account as default if it exists
-                if (accountsData.length > 0 && !formData.accountId) {
-                    setFormData(prev => ({
-                        ...prev,
-                        accountId: accountsData[0].id
-                    }));
-                }
-            } catch (error) {
-                if (error instanceof AppError) {
-                    setError(error.message);
-                    notifications.show({
-                        title: 'Error',
-                        message: 'Failed to load form data',
-                        color: 'LightSalmon',
-                        icon: <IconX size={16}/>,
-                        autoClose: 3000,
-                    });
-                }
+            if (accountsData.length > 0 && !formData.accountId) {
+                setFormData(prev => ({
+                    ...prev,
+                    accountId: accountsData[0].id
+                }));
             }
-        };
+        } catch (error) {
+            if (error instanceof AppError) {
+                setError(error.message);
+                notifications.show({
+                    title: 'Error',
+                    message: 'Failed to load form data',
+                    color: 'LightSalmon',
+                    icon: <IconX size={16} />,
+                    autoClose: 3000,
+                });
+            }
+        }
+    }, [user, type, formData.accountId]);
 
+    useEffect(() => {
         loadData();
-    }, [user, type]);
+    }, [loadData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

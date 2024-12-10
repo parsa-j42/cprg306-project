@@ -108,7 +108,7 @@ export default function LoginForm() {
                 </Button>
                 <Group justify="center" mt="md">
                     <Text size="sm">
-                        Don't have an account?{' '}
+                        Don&apos;t have an account?{' '}
                         <Anchor component={Link} href="/signup" size="sm">
                             Create one
                         </Anchor>

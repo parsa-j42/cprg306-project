@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
     ActionIcon,
     Alert,
@@ -67,7 +67,21 @@ export default function TransactionManager() {
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
     const colorScheme = useComputedColorScheme();
-    const loadTransactions = async () => {
+    const loadAccounts = useCallback(async () => {
+        try {
+            if (!user) return;
+            const data = await services.accounts.getAccountsByUser(user.uid);
+            setAccounts(data);
+            return data;
+        } catch (error) {
+            if (error instanceof AppError) {
+                setError(error.message);
+            }
+            return [];
+        }
+    }, [user]);
+
+    const loadTransactions = useCallback(async () => {
         try {
             setLoading(true);
             if (!user || !initialLoadComplete) return;
@@ -80,7 +94,6 @@ export default function TransactionManager() {
                     dateRange[1] || undefined
                 );
             } else {
-                // Load transactions for all accounts
                 const accountPromises = accounts.map(account =>
                     services.transactions.getTransactionsByAccount(
                         account.id,
@@ -112,9 +125,7 @@ export default function TransactionManager() {
                 );
             }
 
-            // Sort by date, newest first
             filteredTransactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
             setTransactions(filteredTransactions);
         } catch (error) {
             if (error instanceof AppError) {
@@ -130,23 +141,9 @@ export default function TransactionManager() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, initialLoadComplete, selectedAccount, dateRange, transactionType, searchTerm, accounts]);
 
-    const loadAccounts = async () => {
-        try {
-            if (!user) return;
-            const data = await services.accounts.getAccountsByUser(user.uid);
-            setAccounts(data);
-            return data;
-        } catch (error) {
-            if (error instanceof AppError) {
-                setError(error.message);
-            }
-            return [];
-        }
-    };
-
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         try {
             const expenseCategories = await services.categories.getCategoriesByType('EXPENSE');
             const incomeCategories = await services.categories.getCategoriesByType('INCOME');
@@ -156,7 +153,7 @@ export default function TransactionManager() {
                 setError(error.message);
             }
         }
-    };
+    }, []);
 
     // Initial data load
     useEffect(() => {
@@ -168,16 +165,8 @@ export default function TransactionManager() {
                 const loadedAccounts = await loadAccounts();
                 await loadCategories();
 
-                // load transactions for all accs
                 if (loadedAccounts && loadedAccounts.length > 0) {
-                    const accountPromises = accounts.map(account =>
-                        services.transactions.getTransactionsByAccount(account.id)
-                    );
-                    const results = await Promise.all(accountPromises);
-                    const allTransactions = results.flat().sort((a, b) =>
-                        b.createdAt.getTime() - a.createdAt.getTime()
-                    );
-                    setTransactions(allTransactions);
+                    await loadTransactions();
                 }
             } catch (error) {
                 if (error instanceof AppError) {
@@ -190,14 +179,14 @@ export default function TransactionManager() {
         };
 
         init();
-    }, [user]);
+    }, [user, loadAccounts, loadTransactions, loadCategories]);
 
     // filter changes
     useEffect(() => {
         if (initialLoadComplete) {
             loadTransactions();
         }
-    }, [selectedAccount, transactionType, dateRange, searchTerm, initialLoadComplete]);
+    }, [initialLoadComplete, loadTransactions]);
 
     const handleTransactionAction = (transaction: Transaction) => {
         setSelectedTransaction(transaction);
