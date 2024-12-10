@@ -1,10 +1,11 @@
-import {useState} from 'react';
-import {Alert, Anchor, Button, Divider, Group, PasswordInput, Stack, Text, TextInput} from '@mantine/core';
-import {IconAlertCircle, IconBrandGithub} from '@tabler/icons-react';
-import {services} from '@/lib/services';
-import {AppError, ErrorCodes} from '@/lib/errors';
-import {useRouter} from 'next/navigation';
+import { useState } from 'react';
+import { Alert, Anchor, Button, Divider, Group, PasswordInput, Stack, Text, TextInput, Modal } from '@mantine/core';
+import { IconAlertCircle, IconBrandGithub } from '@tabler/icons-react';
+import { services } from '@/lib/services';
+import { AppError, ErrorCodes } from '@/lib/errors';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { notifications } from '@mantine/notifications';
 
 interface LoginFormData {
     email: string;
@@ -18,6 +19,8 @@ export default function LoginForm() {
     });
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState(false);
+    const [resetModalOpened, setResetModalOpened] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
     const router = useRouter();
 
     const handleInputChange = (field: keyof LoginFormData) => (
@@ -64,7 +67,33 @@ export default function LoginForm() {
         }
     };
 
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setLoading(true);
+            await services.users.resetPassword(resetEmail);
+            notifications.show({
+                title: 'Success',
+                message: 'Password reset link has been sent to your email',
+                color: 'LightSeaGreen'
+            });
+            setResetModalOpened(false);
+            setResetEmail('');
+        } catch (error) {
+            if (error instanceof AppError) {
+                notifications.show({
+                    title: 'Error',
+                    message: 'Failed to send reset email. Please try again.',
+                    color: 'LightSalmon'
+                });
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
+        <>
         <form onSubmit={handleSubmit}>
             <Stack>
                 {error && (
@@ -91,6 +120,15 @@ export default function LoginForm() {
                     disabled={loading}
                 />
 
+                <Group justify="flex-end">
+                    <Anchor<'button'>
+                        onClick={() => setResetModalOpened(true)}
+                        size="sm"
+                    >
+                        Forgot password?
+                    </Anchor>
+                </Group>
+
                 <Button type="submit" loading={loading} fullWidth>
                     Sign in
                 </Button>
@@ -116,5 +154,32 @@ export default function LoginForm() {
                 </Group>
             </Stack>
         </form>
+
+        <Modal
+            opened={resetModalOpened}
+            onClose={() => setResetModalOpened(false)}
+            title="Reset Password"
+        >
+            <form onSubmit={handleResetPassword}>
+                <Stack>
+                    <Text size="sm" c="dimmed">
+                        Enter your email address and we&apos;ll send you a link to reset your password.
+                    </Text>
+
+                    <TextInput
+                        required
+                        label="Email"
+                        placeholder="your@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                    />
+
+                    <Button type="submit" loading={loading} fullWidth>
+                        Send Reset Link
+                    </Button>
+                </Stack>
+            </form>
+        </Modal>
+        </>
     );
 }
